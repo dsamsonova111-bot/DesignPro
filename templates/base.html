@@ -16,7 +16,8 @@
             {% if user.is_authenticated %}
                 <span class="navbar-text text-white me-2">Привет, {{ user.username }}!</span>
                 {% if user.is_staff %}
-                    <a class="btn btn-outline-warning btn-sm" href="/superadmin/">Админ-панель</a>
+                    <a class="btn btn-warning btn-sm" href="{% url 'admin-panel' %}">Кабинет администратора</a>
+                    <a class="btn btn-outline-warning btn-sm" href="/superadmin/">Superadmin</a>
                 {% endif %}
                 <a class="btn btn-outline-light btn-sm" href="{% url 'profile' %}">Личный кабинет</a>
                 <form method="post" action="{% url 'logout' %}" class="d-inline">

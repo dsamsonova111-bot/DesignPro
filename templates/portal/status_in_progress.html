@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Принять заявку в работу — Design.pro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="card-title mb-3">Перевод заявки в статус «Принято в работу»</h3>
+                <p class="text-muted">Заявка: <strong>{{ design_req.title }}</strong> (Автор: {{ design_req.user.username }})</p>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.comment.id_for_label }}">{{ form.comment.label }}</label>
+                        <textarea name="{{ form.comment.html_name }}"
+                                  id="{{ form.comment.id_for_label }}"
+                                  rows="3"
+                                  placeholder="{{ form.comment.field.widget.attrs.placeholder }}"
+                                  class="form-control {% if form.comment.errors %}is-invalid{% endif %}">{{ form.comment.value|default_if_none:'' }}</textarea>
+                        {% for error in form.comment.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-warning">Подтвердить «Принято в работу»</button>
+                        <a href="{% url 'admin-panel' %}" class="btn btn-outline-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

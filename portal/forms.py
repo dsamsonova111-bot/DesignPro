@@ -2,7 +2,7 @@ import os
 import re
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import CustomUser, DesignRequest
+from .models import CustomUser, DesignRequest, Category
 
 
 class RegisterForm(forms.ModelForm):
@@ -92,8 +92,54 @@ class DesignRequestForm(forms.ModelForm):
         if ext not in allowed_extensions:
             raise ValidationError('Недопустимый формат файла. Разрешены только: jpg, jpeg, png, bmp.')
 
-        max_size = 2 * 1024 * 1024  # 2 МБ в байтах
+        max_size = 2 * 1024 * 1024
         if photo.size > max_size:
             raise ValidationError('Размер файла не должен превышать 2 МБ.')
 
         return photo
+
+
+class StatusInProgressForm(forms.ModelForm):
+    comment = forms.CharField(
+        label='Комментарий администратора (обязательно)',
+        required=True,
+        widget=forms.Textarea(attrs={
+            'rows': 3,
+            'placeholder': 'Укажите комментарий к принятию заявки в работу...'
+        }),
+        error_messages={'required': 'Необходимо указать комментарий при переводе заявки в работу.'}
+    )
+
+    class Meta:
+        model = DesignRequest
+        fields = ['comment']
+
+    def clean_comment(self):
+        comment = self.cleaned_data.get('comment', '').strip()
+        if not comment:
+            raise ValidationError('Комментарий не может быть пустым.')
+        return comment
+
+
+class StatusCompletedForm(forms.ModelForm):
+    design_image = forms.ImageField(
+        label='Изображение созданного дизайна (обязательно)',
+        required=True,
+        error_messages={'required': 'Необходимо прикрепить изображение готового дизайна.'}
+    )
+
+    class Meta:
+        model = DesignRequest
+        fields = ['design_image']
+
+    def clean_design_image(self):
+        image = self.cleaned_data.get('design_image')
+        if not image:
+            raise ValidationError('Необходимо прикрепить изображение готового дизайна.')
+
+        ext = os.path.splitext(image.name)[1].lower()
+        allowed_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
+        if ext not in allowed_extensions:
+            raise ValidationError('Недопустимый формат изображения. Разрешены: jpg, jpeg, png, bmp.')
+
+        return image

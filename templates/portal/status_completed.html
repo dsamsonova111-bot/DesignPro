@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Завершить заявку — Design.pro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="card-title mb-3">Перевод заявки в статус «Выполнено»</h3>
+                <p class="text-muted">Заявка: <strong>{{ design_req.title }}</strong> (Автор: {{ design_req.user.username }})</p>
+
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label" for="{{ form.design_image.id_for_label }}">{{ form.design_image.label }}</label>
+                        <input type="file"
+                               name="{{ form.design_image.html_name }}"
+                               id="{{ form.design_image.id_for_label }}"
+                               class="form-control {% if form.design_image.errors %}is-invalid{% endif %}">
+                        {% for error in form.design_image.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success">Подтвердить «Выполнено»</button>
+                        <a href="{% url 'admin-panel' %}" class="btn btn-outline-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

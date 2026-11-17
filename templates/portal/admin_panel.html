@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Кабинет администратора — Design.pro{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h2 class="mb-0">Панель управления администратора</h2>
+    <a href="{% url 'category-list' %}" class="btn btn-dark">Управление категориями заявок</a>
+</div>
+
+<h4 class="mb-3">Все заявки пользователей</h4>
+
+{% if all_requests %}
+    <div class="table-responsive">
+        <table class="table table-bordered bg-white align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Дата и время</th>
+                    <th>Пользователь</th>
+                    <th>Название</th>
+                    <th>Категория</th>
+                    <th>Фото помещения</th>
+                    <th>Статус</th>
+                    <th>Комментарий / Дизайн</th>
+                    <th>Смена статуса</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in all_requests %}
+                    <tr>
+                        <td>{{ req.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>{{ req.user.full_name }} ({{ req.user.username }})</td>
+                        <td>
+                            <strong>{{ req.title }}</strong><br>
+                            <small class="text-muted">{{ req.description }}</small>
+                        </td>
+                        <td>{{ req.category.name }}</td>
+                        <td>
+                            {% if req.photo %}
+                                <a href="{{ req.photo.url }}" target="_blank">Открыть план</a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if req.status == 'completed' %}bg-success{% elif req.status == 'in_progress' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                {{ req.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if req.status == 'in_progress' %}
+                                <small>{{ req.comment }}</small>
+                            {% elif req.status == 'completed' and req.design_image %}
+                                <a href="{{ req.design_image.url }}" target="_blank">Готовый дизайн</a>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if req.status == 'new' %}
+                                <div class="d-flex flex-column gap-1">
+                                    <a href="{% url 'request-in-progress' req.pk %}" class="btn btn-warning btn-sm">
+                                        Принять в работу
+                                    </a>
+                                    <a href="{% url 'request-completed' req.pk %}" class="btn btn-success btn-sm">
+                                        Выполнено
+                                    </a>
+                                </div>
+                            {% else %}
+                                <span class="text-muted small">Статус зафиксирован</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">Заявок пока нет.</div>
+{% endif %}
+{% endblock %}
