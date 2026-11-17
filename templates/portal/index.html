@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Главная — Design.pro{% endblock %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-white rounded-3 shadow-sm border">
+    <div class="container-fluid py-2">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-5 fw-bold">Дизайн-студия «Design.pro»</h1>
+                <p class="fs-5 text-muted">
+                    Профессиональное создание и оформление интерьеров жилых помещений.
+                    Загрузите план вашей квартиры, и наши дизайнеры предложат лучшие варианты планировки и стиля.
+                </p>
+                {% if not user.is_authenticated %}
+                    <div class="d-flex gap-2 mt-3">
+                        <a href="{% url 'register' %}" class="btn btn-primary btn-lg">Зарегистрироваться</a>
+                        <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-lg">Войти в кабинет</a>
+                    </div>
+                {% else %}
+                    <a href="{% url 'profile' %}" class="btn btn-primary btn-lg mt-3">Перейти в личный кабинет</a>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-center mt-4 mt-md-0">
+                <div class="card border-warning bg-warning-subtle">
+                    <div class="card-body py-4">
+                        <h6 class="text-uppercase text-muted mb-2">Сейчас в работе</h6>
+                        <div class="display-4 fw-bold text-dark">{{ in_progress_count }}</div>
+                        <small class="text-muted">заявок в статусе «Принято в работу»</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h3 class="mb-3">Последние выполненные проекты</h3>
+
+{% if completed_requests %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+        {% for item in completed_requests %}
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    {% if item.design_image %}
+                        <img src="{{ item.design_image.url }}" class="card-img-top" alt="{{ item.title }}" style="height: 200px; object-fit: cover;">
+                    {% elif item.photo %}
+                        <img src="{{ item.photo.url }}" class="card-img-top" alt="{{ item.title }}" style="height: 200px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body d-flex flex-column">
+                        <span class="badge bg-primary align-self-start mb-2">{{ item.category.name }}</span>
+                        <h5 class="card-title">{{ item.title }}</h5>
+                        <p class="card-text text-muted small mt-auto mb-0">
+                            Добавлено: {{ item.created_at|date:"d.m.Y H:i" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-secondary">
+        Выполненных заявок пока нет.
+    </div>
+{% endif %}
+{% endblock %}
