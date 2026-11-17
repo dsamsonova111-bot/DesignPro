@@ -143,3 +143,22 @@ class StatusCompletedForm(forms.ModelForm):
             raise ValidationError('Недопустимый формат изображения. Разрешены: jpg, jpeg, png, bmp.')
 
         return image
+
+
+class CategoryForm(forms.ModelForm):
+    name = forms.CharField(
+        label='Название новой категории',
+        widget=forms.TextInput(attrs={'placeholder': 'Например: Ландшафтный дизайн'})
+    )
+
+    class Meta:
+        model = Category
+        fields = ['name']
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name', '').strip()
+        if not name:
+            raise ValidationError('Введите название категории.')
+        if Category.objects.filter(name__iexact=name).exists():
+            raise ValidationError('Категория с таким названием уже существует.')
+        return name

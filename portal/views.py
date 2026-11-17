@@ -6,6 +6,7 @@ from .forms import (
     DesignRequestForm,
     StatusInProgressForm,
     StatusCompletedForm,
+    CategoryForm,
 )
 from .models import DesignRequest, Category
 
@@ -164,4 +165,43 @@ def change_status_completed_view(request, pk):
     return render(request, 'portal/status_completed.html', {
         'design_req': design_req,
         'form': form,
+    })
+@user_passes_test(is_admin_user, login_url='login')
+def category_list_view(request):
+    """Просмотр и добавление категорий заявок администратором."""
+    categories = Category.objects.all().order_by('id')
+
+    if request.method == 'POST':
+        form = CategoryForm(request.POST)
+        if form.is_valid():
+            category = form.save()
+            messages.success(request, f'Категория «{category.name}» успешно добавлена.')
+            return redirect('category-list')
+    else:
+        form = CategoryForm()
+
+    return render(request, 'portal/category_list.html', {
+        'categories': categories,
+        'form': form,
+    })
+
+
+@user_passes_test(is_admin_user, login_url='login')
+def category_delete_view(request, pk):
+    """Удаление категории с подтверждением и каскадным удалением всех её заявок."""
+    category = get_object_or_404(Category, pk=pk)
+    related_requests_count = category.requests.count()
+
+    if request.method == 'POST':
+        category_name = category.name
+        category.delete()
+        messages.success(
+            request,
+            f'Категория «{category_name}» и все связанные заявки ({related_requests_count} шт.) удалены.'
+        )
+        return redirect('category-list')
+
+    return render(request, 'portal/category_confirm_delete.html', {
+        'category': category,
+        'related_requests_count': related_requests_count,
     })

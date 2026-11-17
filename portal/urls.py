@@ -13,5 +13,6 @@ urlpatterns = [
     path('admin-panel/', views.admin_panel_view, name='admin-panel'),
     path('admin-panel/requests/<int:pk>/in-progress/', views.change_status_in_progress_view, name='request-in-progress'),
     path('admin-panel/requests/<int:pk>/completed/', views.change_status_completed_view, name='request-completed'),
-    path('admin-panel/categories/', views.admin_panel_view, name='category-list'),
+    path('admin-panel/categories/', views.category_list_view, name='category-list'),
+    path('admin-panel/categories/<int:pk>/delete/', views.category_delete_view, name='category-delete'),
 ]
