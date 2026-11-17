@@ -47,6 +47,7 @@
                     <th>Описание</th>
                     <th>Категория</th>
                     <th>Статус</th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -60,6 +61,15 @@
                             <span class="badge {% if req.status == 'completed' %}bg-success{% elif req.status == 'in_progress' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
                                 {{ req.get_status_display }}
                             </span>
+                        </td>
+                        <td>
+                            {% if req.status == 'new' %}
+                                <a href="{% url 'request-delete' req.pk %}" class="btn btn-outline-danger btn-sm">
+                                    Удалить
+                                </a>
+                            {% else %}
+                                <span class="text-muted small">Удаление недоступно</span>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}

@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import RegisterForm
 from .models import DesignRequest
 from .forms import RegisterForm, DesignRequestForm
-
+from django.shortcuts import render, redirect, get_object_or_404
 
 def index(request):
     """Главная страница портала Design.pro."""
@@ -70,3 +70,21 @@ def create_request_view(request):
         form = DesignRequestForm()
 
     return render(request, 'portal/request_create.html', {'form': form})
+@login_required
+def delete_request_view(request, pk):
+    """Удаление своей заявки в статусе «Новая» с обязательным подтверждением."""
+    design_req = get_object_or_404(DesignRequest, pk=pk, user=request.user)
+
+    if design_req.status != 'new':
+        messages.error(
+            request,
+            'Удаление невозможно: заявка уже принята в работу или выполнена.'
+        )
+        return redirect('profile')
+
+    if request.method == 'POST':
+        design_req.delete()
+        messages.success(request, 'Заявка успешно удалена.')
+        return redirect('profile')
+
+    return render(request, 'portal/request_confirm_delete.html', {'design_req': design_req})

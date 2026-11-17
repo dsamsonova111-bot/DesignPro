@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Подтверждение удаления — Design.pro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="card-title text-danger mb-3">Подтвердите удаление заявки</h3>
+                <p>Вы действительно хотите безвозвратно удалить следующую заявку?</p>
+
+                <ul class="list-group mb-4">
+                    <li class="list-group-item"><strong>Название:</strong> {{ design_req.title }}</li>
+                    <li class="list-group-item"><strong>Категория:</strong> {{ design_req.category.name }}</li>
+                    <li class="list-group-item"><strong>Дата создания:</strong> {{ design_req.created_at|date:"d.m.Y H:i" }}</li>
+                    <li class="list-group-item"><strong>Статус:</strong> {{ design_req.get_status_display }}</li>
+                </ul>
+
+                <form method="post" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Да, удалить заявку</button>
+                    <a href="{% url 'profile' %}" class="btn btn-outline-secondary">Отмена</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
