@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .forms import RegisterForm
 from .models import DesignRequest
+from .forms import RegisterForm, DesignRequestForm
 
 
 def index(request):
@@ -41,3 +42,19 @@ def profile_view(request):
     """Личный кабинет авторизованного пользователя."""
     user_requests = request.user.requests.all()
     return render(request, 'portal/profile.html', {'user_requests': user_requests})
+@login_required
+def create_request_view(request):
+    """Создание новой заявки авторизованным пользователем."""
+    if request.method == 'POST':
+        form = DesignRequestForm(request.POST, request.FILES)
+        if form.is_valid():
+            design_req = form.save(commit=False)
+            design_req.user = request.user
+            design_req.status = 'new'
+            design_req.save()
+            messages.success(request, 'Заявка успешно создана!')
+            return redirect('profile')
+    else:
+        form = DesignRequestForm()
+
+    return render(request, 'portal/request_create.html', {'form': form})

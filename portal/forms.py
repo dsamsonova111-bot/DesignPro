@@ -1,7 +1,8 @@
+import os
 import re
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import CustomUser
+from .models import CustomUser, DesignRequest
 
 
 class RegisterForm(forms.ModelForm):
@@ -64,3 +65,35 @@ class RegisterForm(forms.ModelForm):
             self.add_error('password_confirm', 'Введённые пароли не совпадают.')
 
         return cleaned_data
+
+
+class DesignRequestForm(forms.ModelForm):
+    class Meta:
+        model = DesignRequest
+        fields = ['title', 'description', 'category', 'photo']
+        labels = {
+            'title': 'Название заявки',
+            'description': 'Описание',
+            'category': 'Категория',
+            'photo': 'Фото помещения или его план (jpg, jpeg, png, bmp до 2 МБ)',
+        }
+        widgets = {
+            'title': forms.TextInput(attrs={'placeholder': 'Например: Дизайн гостиной 24 кв.м.'}),
+            'description': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Опишите ваши пожелания к интерьеру...'}),
+        }
+
+    def clean_photo(self):
+        photo = self.cleaned_data.get('photo')
+        if not photo:
+            raise ValidationError('Необходимо прикрепить фото помещения или его план.')
+
+        ext = os.path.splitext(photo.name)[1].lower()
+        allowed_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
+        if ext not in allowed_extensions:
+            raise ValidationError('Недопустимый формат файла. Разрешены только: jpg, jpeg, png, bmp.')
+
+        max_size = 2 * 1024 * 1024  # 2 МБ в байтах
+        if photo.size > max_size:
+            raise ValidationError('Размер файла не должен превышать 2 МБ.')
+
+        return photo
