@@ -39,9 +39,21 @@ def register_view(request):
 
 @login_required
 def profile_view(request):
-    """Личный кабинет авторизованного пользователя."""
+    """Личный кабинет авторизованного пользователя со списком и фильтрацией его заявок."""
+    status_filter = request.GET.get('status', '')
     user_requests = request.user.requests.all()
-    return render(request, 'portal/profile.html', {'user_requests': user_requests})
+
+    allowed_statuses = {'new', 'in_progress', 'completed'}
+    if status_filter in allowed_statuses:
+        user_requests = user_requests.filter(status=status_filter)
+    else:
+        status_filter = ''
+
+    context = {
+        'user_requests': user_requests,
+        'current_status': status_filter,
+    }
+    return render(request, 'portal/profile.html', context)
 @login_required
 def create_request_view(request):
     """Создание новой заявки авторизованным пользователем."""
