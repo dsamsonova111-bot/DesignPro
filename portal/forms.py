@@ -36,8 +36,11 @@ class RegisterForm(UserCreationForm):
         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
     )
     agreement = forms.BooleanField(
-        label='Согласие на обработку персональных данных',
+        label='Я даю согласие на обработку персональных данных',
         required=True,
+        error_messages={
+            'required': 'Необходимо отметить согласие на обработку персональных данных.',
+        },
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
     )
 
@@ -70,6 +73,7 @@ class RegisterForm(UserCreationForm):
                 'Необходимо отметить согласие на обработку персональных данных.'
             )
         return agreed
+
 
 
 class DesignRequestForm(forms.ModelForm):
