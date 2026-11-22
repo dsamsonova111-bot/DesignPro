@@ -1,27 +1,25 @@
-{% extends "base.html" %}
-
-{% block title %}Удаление категории — Design.pro{% endblock %}
+{% extends 'base.html' %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card border-danger shadow-sm">
-            <div class="card-body p-4">
-                <h3 class="card-title text-danger mb-3">Подтвердите удаление категории</h3>
-                <p>Вы действительно хотите удалить категорию <strong>«{{ category.name }}»</strong>?</p>
-
-                <div class="alert alert-warning">
-                    <strong>Внимание!</strong> Вместе с этой категорией будут безвозвратно удалены все заявки данной категории
-                    (количество связанных заявок: <strong>{{ related_requests_count }}</strong>).
+<h2>Регистрация</h2>
+<form method="post" novalidate class="mt-3" style="max-width: 500px;">
+    {% csrf_token %}
+    {% for field in form %}
+        <div class="mb-3">
+            {% if field.name == 'agreement' %}
+                <div class="form-check">
+                    {{ field }}
+                    <label for="{{ field.id_for_label }}" class="form-check-label">{{ field.label }}</label>
                 </div>
-
-                <form method="post" class="d-flex gap-2">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Да, удалить категорию и все её заявки</button>
-                    <a href="{% url 'category-list' %}" class="btn btn-outline-secondary">Отмена</a>
-                </form>
-            </div>
+            {% else %}
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                {{ field }}
+            {% endif %}
+            {% if field.errors %}
+                <div class="text-danger small mt-1">{{ field.errors|join:", " }}</div>
+            {% endif %}
         </div>
-    </div>
-</div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+</form>
 {% endblock %}

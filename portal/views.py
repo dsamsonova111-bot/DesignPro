@@ -1,41 +1,64 @@
-from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.views import LoginView
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
 from .forms import (
-    RegisterForm,
-    DesignRequestForm,
-    StatusInProgressForm,
-    StatusCompletedForm,
     CategoryForm,
+    DesignRequestForm,
+    RegisterForm,
+    StatusCompletedForm,
+    StatusInProgressForm,
 )
-from .models import DesignRequest, Category
+from .models import Category, DesignRequest
+
+
+def is_admin(user):
+    return user.is_authenticated and user.is_superuser
+
+
+class CustomLoginView(LoginView):
+    template_name = 'registration/login.html'
+    redirect_authenticated_user = True
+
+    def get_success_url(self):
+        if self.request.user.is_superuser:
+            return reverse_lazy('admin_panel')
+        return reverse_lazy('profile')
 
 
 def index(request):
-    """Главная страница портала Design.pro."""
-    completed_requests = DesignRequest.objects.filter(status='completed').order_by('-created_at')[:4]
-    in_progress_count = DesignRequest.objects.filter(status='in_progress').count()
+    completed_requests = DesignRequest.objects.filter(
+        status=DesignRequest.STATUS_COMPLETED
+    ).order_by('-created_at')[:4]
 
-    context = {
-        'completed_requests': completed_requests,
-        'in_progress_count': in_progress_count,
-    }
-    return render(request, 'portal/index.html', context)
+    in_progress_count = DesignRequest.objects.filter(
+        status=DesignRequest.STATUS_IN_PROGRESS
+    ).count()
+
+    return render(
+        request,
+        'portal/index.html',
+        {
+            'completed_requests': completed_requests,
+            'in_progress_count': in_progress_count,
+        },
+    )
 
 
-def register_view(request):
-    """Регистрация нового пользователя с серверной валидацией."""
+def register(request):
     if request.user.is_authenticated:
         return redirect('profile')
 
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.set_password(form.cleaned_data['password'])
-            user.save()
-            messages.success(request, 'Регистрация прошла успешно! Теперь вы можете войти в личный кабинет.')
-            return redirect('login')
+            user = form.save()
+            login(request, user)
+            messages.success(request, 'Регистрация прошла успешно.')
+            return redirect('profile')
+        messages.error(request, 'Проверьте правильность заполнения полей.')
     else:
         form = RegisterForm()
 
@@ -43,36 +66,42 @@ def register_view(request):
 
 
 @login_required
-def profile_view(request):
-    """Личный кабинет авторизованного пользователя со списком и фильтрацией его заявок."""
-    status_filter = request.GET.get('status', '')
-    user_requests = request.user.requests.all()
+def profile(request):
+    if request.user.is_superuser:
+        return redirect('admin_panel')
 
-    allowed_statuses = {'new', 'in_progress', 'completed'}
-    if status_filter in allowed_statuses:
-        user_requests = user_requests.filter(status=status_filter)
+    current_status = request.GET.get('status', '')
+    qs = DesignRequest.objects.filter(user=request.user).order_by('-created_at')
+
+    valid_statuses = [choice[0] for choice in DesignRequest.STATUS_CHOICES]
+    if current_status in valid_statuses:
+        qs = qs.filter(status=current_status)
     else:
-        status_filter = ''
+        current_status = ''
 
-    context = {
-        'user_requests': user_requests,
-        'current_status': status_filter,
-    }
-    return render(request, 'portal/profile.html', context)
+    return render(
+        request,
+        'portal/profile.html',
+        {
+            'requests': qs,
+            'status_choices': DesignRequest.STATUS_CHOICES,
+            'current_status': current_status,
+        },
+    )
 
 
 @login_required
-def create_request_view(request):
-    """Создание новой заявки авторизованным пользователем."""
+def request_create(request):
     if request.method == 'POST':
         form = DesignRequestForm(request.POST, request.FILES)
         if form.is_valid():
-            design_req = form.save(commit=False)
-            design_req.user = request.user
-            design_req.status = 'new'
-            design_req.save()
-            messages.success(request, 'Заявка успешно создана!')
+            design_request = form.save(commit=False)
+            design_request.user = request.user
+            design_request.status = DesignRequest.STATUS_NEW
+            design_request.save()
+            messages.success(request, 'Заявка создана со статусом «Новая».')
             return redirect('profile')
+        messages.error(request, 'Ошибка при создании заявки. Проверьте поля и файл.')
     else:
         form = DesignRequestForm()
 
@@ -80,128 +109,120 @@ def create_request_view(request):
 
 
 @login_required
-def delete_request_view(request, pk):
-    """Удаление своей заявки в статусе «Новая» с обязательным подтверждением."""
-    design_req = get_object_or_404(DesignRequest, pk=pk, user=request.user)
+def request_delete(request, pk):
+    design_request = get_object_or_404(DesignRequest, pk=pk, user=request.user)
 
-    if design_req.status != 'new':
+    if design_request.status != DesignRequest.STATUS_NEW:
         messages.error(
             request,
-            'Удаление невозможно: заявка уже принята в работу или выполнена.'
+            'Удалить можно только заявку со статусом «Новая».',
         )
         return redirect('profile')
 
     if request.method == 'POST':
-        design_req.delete()
-        messages.success(request, 'Заявка успешно удалена.')
+        design_request.delete()
+        messages.success(request, 'Заявка удалена.')
         return redirect('profile')
 
-    return render(request, 'portal/request_confirm_delete.html', {'design_req': design_req})
+    return render(
+        request,
+        'portal/request_confirm_delete.html',
+        {'design_request': design_request},
+    )
 
 
-def is_admin_user(user):
-    """Проверка, что пользователь авторизован и является администратором."""
-    return user.is_authenticated and user.is_staff
+@user_passes_test(is_admin, login_url='login')
+def admin_panel(request):
+    all_requests = DesignRequest.objects.select_related('user', 'category').order_by('-created_at')
+    return render(
+        request,
+        'portal/admin_panel.html',
+        {'requests': all_requests},
+    )
 
 
-@user_passes_test(is_admin_user, login_url='login')
-def admin_panel_view(request):
-    """Панель управления сайтом (личный кабинет администратора)."""
-    all_requests = DesignRequest.objects.select_related('user', 'category').all()
-    categories = Category.objects.all()
-    context = {
-        'all_requests': all_requests,
-        'categories': categories,
-    }
-    return render(request, 'portal/admin_panel.html', context)
+@user_passes_test(is_admin, login_url='login')
+def status_in_progress(request, pk):
+    design_request = get_object_or_404(DesignRequest, pk=pk)
 
-
-@user_passes_test(is_admin_user, login_url='login')
-def change_status_in_progress_view(request, pk):
-    """Смена статуса заявки с «Новая» на «Принято в работу» с обязательным комментарием."""
-    design_req = get_object_or_404(DesignRequest, pk=pk)
-
-    if design_req.status != 'new':
-        messages.error(request, 'Смена статуса невозможна: заявка уже находится в работе или выполнена.')
-        return redirect('admin-panel')
+    if design_request.status != DesignRequest.STATUS_NEW:
+        messages.error(request, 'Статус можно изменить только у заявки со статусом «Новая».')
+        return redirect('admin_panel')
 
     if request.method == 'POST':
-        form = StatusInProgressForm(request.POST, instance=design_req)
+        form = StatusInProgressForm(request.POST, instance=design_request)
         if form.is_valid():
-            req_obj = form.save(commit=False)
-            req_obj.status = 'in_progress'
-            req_obj.save()
-            messages.success(request, f'Заявка «{req_obj.title}» переведена в статус «Принято в работу».')
-            return redirect('admin-panel')
+            updated = form.save(commit=False)
+            updated.status = DesignRequest.STATUS_IN_PROGRESS
+            updated.save()
+            messages.success(request, 'Статус изменен на «Принято в работу».')
+            return redirect('admin_panel')
     else:
-        form = StatusInProgressForm(instance=design_req)
+        form = StatusInProgressForm(instance=design_request)
 
-    return render(request, 'portal/status_in_progress.html', {
-        'design_req': design_req,
-        'form': form,
-    })
+    return render(
+        request,
+        'portal/status_in_progress.html',
+        {'form': form, 'design_request': design_request},
+    )
 
 
-@user_passes_test(is_admin_user, login_url='login')
-def change_status_completed_view(request, pk):
-    """Смена статуса заявки с «Новая» на «Выполнено» с обязательным изображением дизайна."""
-    design_req = get_object_or_404(DesignRequest, pk=pk)
+@user_passes_test(is_admin, login_url='login')
+def status_completed(request, pk):
+    design_request = get_object_or_404(DesignRequest, pk=pk)
 
-    if design_req.status != 'new':
-        messages.error(request, 'Смена статуса невозможна: заявка уже находится в работе или выполнена.')
-        return redirect('admin-panel')
+    if design_request.status != DesignRequest.STATUS_NEW:
+        messages.error(request, 'Статус можно изменить только у заявки со статусом «Новая».')
+        return redirect('admin_panel')
 
     if request.method == 'POST':
-        form = StatusCompletedForm(request.POST, request.FILES, instance=design_req)
+        form = StatusCompletedForm(request.POST, request.FILES, instance=design_request)
         if form.is_valid():
-            req_obj = form.save(commit=False)
-            req_obj.status = 'completed'
-            req_obj.save()
-            messages.success(request, f'Заявка «{req_obj.title}» переведена в статус «Выполнено».')
-            return redirect('admin-panel')
+            updated = form.save(commit=False)
+            updated.status = DesignRequest.STATUS_COMPLETED
+            updated.save()
+            messages.success(request, 'Статус изменен на «Выполнено».')
+            return redirect('admin_panel')
     else:
-        form = StatusCompletedForm(instance=design_req)
+        form = StatusCompletedForm(instance=design_request)
 
-    return render(request, 'portal/status_completed.html', {
-        'design_req': design_req,
-        'form': form,
-    })
-@user_passes_test(is_admin_user, login_url='login')
-def category_list_view(request):
-    """Просмотр и добавление категорий заявок администратором."""
-    categories = Category.objects.all().order_by('id')
+    return render(
+        request,
+        'portal/status_completed.html',
+        {'form': form, 'design_request': design_request},
+    )
 
+
+@user_passes_test(is_admin, login_url='login')
+def category_list(request):
     if request.method == 'POST':
         form = CategoryForm(request.POST)
         if form.is_valid():
-            category = form.save()
-            messages.success(request, f'Категория «{category.name}» успешно добавлена.')
-            return redirect('category-list')
+            form.save()
+            messages.success(request, 'Категория добавлена.')
+            return redirect('category_list')
     else:
         form = CategoryForm()
 
-    return render(request, 'portal/category_list.html', {
-        'categories': categories,
-        'form': form,
-    })
+    categories = Category.objects.all()
+    return render(
+        request,
+        'portal/category_list.html',
+        {'form': form, 'categories': categories},
+    )
 
 
-@user_passes_test(is_admin_user, login_url='login')
-def category_delete_view(request, pk):
-    """Удаление категории с подтверждением и каскадным удалением всех её заявок."""
+@user_passes_test(is_admin, login_url='login')
+def category_delete(request, pk):
     category = get_object_or_404(Category, pk=pk)
-    related_requests_count = category.requests.count()
 
     if request.method == 'POST':
-        category_name = category.name
         category.delete()
-        messages.success(
-            request,
-            f'Категория «{category_name}» и все связанные заявки ({related_requests_count} шт.) удалены.'
-        )
-        return redirect('category-list')
+        messages.success(request, 'Категория и связанные с ней заявки удалены.')
+        return redirect('category_list')
 
-    return render(request, 'portal/category_confirm_delete.html', {
-        'category': category,
-        'related_requests_count': related_requests_count,
-    })
+    return render(
+        request,
+        'portal/category_confirm_delete.html',
+        {'category': category},
+    )

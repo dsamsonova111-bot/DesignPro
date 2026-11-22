@@ -1,18 +1,18 @@
+from django.contrib.auth.views import LogoutView
 from django.urls import path
-from django.contrib.auth import views as auth_views
 from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('register/', views.register_view, name='register'),
-    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
-    path('profile/', views.profile_view, name='profile'),
-    path('requests/create/', views.create_request_view, name='request-create'),
-    path('requests/<int:pk>/delete/', views.delete_request_view, name='request-delete'),
-    path('admin-panel/', views.admin_panel_view, name='admin-panel'),
-    path('admin-panel/requests/<int:pk>/in-progress/', views.change_status_in_progress_view, name='request-in-progress'),
-    path('admin-panel/requests/<int:pk>/completed/', views.change_status_completed_view, name='request-completed'),
-    path('admin-panel/categories/', views.category_list_view, name='category-list'),
-    path('admin-panel/categories/<int:pk>/delete/', views.category_delete_view, name='category-delete'),
+    path('login/', views.CustomLoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(next_page='index'), name='logout'),
+    path('register/', views.register, name='register'),
+    path('profile/', views.profile, name='profile'),
+    path('request/create/', views.request_create, name='request_create'),
+    path('request/<int:pk>/delete/', views.request_delete, name='request_delete'),
+    path('panel/', views.admin_panel, name='admin_panel'),
+    path('panel/request/<int:pk>/in-progress/', views.status_in_progress, name='status_in_progress'),
+    path('panel/request/<int:pk>/completed/', views.status_completed, name='status_completed'),
+    path('panel/categories/', views.category_list, name='category_list'),
+    path('panel/categories/<int:pk>/delete/', views.category_delete, name='category_delete'),
 ]

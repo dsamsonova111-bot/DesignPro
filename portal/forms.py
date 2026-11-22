@@ -1,164 +1,117 @@
-import os
 import re
 from django import forms
-from django.core.exceptions import ValidationError
-from .models import CustomUser, DesignRequest, Category
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import UserCreationForm
+from .models import Category, DesignRequest
+
+User = get_user_model()
 
 
-class RegisterForm(forms.ModelForm):
+class RegisterForm(UserCreationForm):
     full_name = forms.CharField(
         label='ФИО',
-        widget=forms.TextInput(attrs={'placeholder': 'Иванов Иван Иванович'})
+        max_length=255,
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
     )
     username = forms.CharField(
         label='Логин',
-        widget=forms.TextInput(attrs={'placeholder': 'ivan-ivanov'})
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
     )
     email = forms.EmailField(
         label='Email',
-        widget=forms.EmailInput(attrs={'placeholder': 'ivan@example.ru'})
-    )
-    password = forms.CharField(
-        label='Пароль',
-        widget=forms.PasswordInput(attrs={'placeholder': 'Введите пароль'})
-    )
-    password_confirm = forms.CharField(
-        label='Повтор пароля',
-        widget=forms.PasswordInput(attrs={'placeholder': 'Повторите пароль'})
-    )
-    consent = forms.BooleanField(
-        label='Я согласен на обработку персональных данных',
         required=True,
-        error_messages={'required': 'Необходимо дать согласие на обработку персональных данных.'}
+        widget=forms.EmailInput(attrs={'class': 'form-control'}),
+    )
+    password1 = forms.CharField(
+        label='Пароль',
+        required=True,
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+    )
+    password2 = forms.CharField(
+        label='Повтор пароля',
+        required=True,
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+    )
+    agreement = forms.BooleanField(
+        label='Согласие на обработку персональных данных',
+        required=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
     )
 
     class Meta:
-        model = CustomUser
-        fields = ['full_name', 'username', 'email']
+        model = User
+        fields = ['full_name', 'username', 'email', 'password1', 'password2', 'agreement']
 
     def clean_full_name(self):
         full_name = self.cleaned_data.get('full_name', '').strip()
-        if not re.match(r'^[А-Яа-яЁё\s-]+$', full_name):
-            raise ValidationError('ФИО должно содержать только кириллические буквы, пробелы и дефис.')
+        if not re.fullmatch(r'[А-Яа-яЁё\s-]+', full_name):
+            raise forms.ValidationError(
+                'ФИО должно содержать только кириллические буквы, пробелы и дефис.'
+            )
         return full_name
 
     def clean_username(self):
         username = self.cleaned_data.get('username', '').strip()
-        if not re.match(r'^[A-Za-z-]+$', username):
-            raise ValidationError('Логин должен содержать только латинские буквы и дефис.')
-        if CustomUser.objects.filter(username__iexact=username).exists():
-            raise ValidationError('Пользователь с таким логином уже зарегистрирован.')
+        if not re.fullmatch(r'[A-Za-z-]+', username):
+            raise forms.ValidationError(
+                'Логин может содержать только латинские буквы и дефис.'
+            )
+        if User.objects.filter(username__iexact=username).exists():
+            raise forms.ValidationError('Пользователь с таким логином уже существует.')
         return username
 
-    def clean_email(self):
-        email = self.cleaned_data.get('email', '').strip()
-        if CustomUser.objects.filter(email__iexact=email).exists():
-            raise ValidationError('Этот Email уже используется.')
-        return email
-
-    def clean(self):
-        cleaned_data = super().clean()
-        password = cleaned_data.get('password')
-        password_confirm = cleaned_data.get('password_confirm')
-
-        if password and password_confirm and password != password_confirm:
-            self.add_error('password_confirm', 'Введённые пароли не совпадают.')
-
-        return cleaned_data
+    def clean_agreement(self):
+        agreed = self.cleaned_data.get('agreement')
+        if not agreed:
+            raise forms.ValidationError(
+                'Необходимо отметить согласие на обработку персональных данных.'
+            )
+        return agreed
 
 
 class DesignRequestForm(forms.ModelForm):
     class Meta:
         model = DesignRequest
         fields = ['title', 'description', 'category', 'photo']
-        labels = {
-            'title': 'Название заявки',
-            'description': 'Описание',
-            'category': 'Категория',
-            'photo': 'Фото помещения или его план (jpg, jpeg, png, bmp до 2 МБ)',
-        }
         widgets = {
-            'title': forms.TextInput(attrs={'placeholder': 'Например: Дизайн гостиной 24 кв.м.'}),
-            'description': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Опишите ваши пожелания к интерьеру...'}),
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'photo': forms.FileInput(attrs={'class': 'form-control'}),
         }
 
-    def clean_photo(self):
-        photo = self.cleaned_data.get('photo')
-        if not photo:
-            raise ValidationError('Необходимо прикрепить фото помещения или его план.')
 
-        ext = os.path.splitext(photo.name)[1].lower()
-        allowed_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
-        if ext not in allowed_extensions:
-            raise ValidationError('Недопустимый формат файла. Разрешены только: jpg, jpeg, png, bmp.')
-
-        max_size = 2 * 1024 * 1024
-        if photo.size > max_size:
-            raise ValidationError('Размер файла не должен превышать 2 МБ.')
-
-        return photo
+class CategoryForm(forms.ModelForm):
+    class Meta:
+        model = Category
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+        }
 
 
 class StatusInProgressForm(forms.ModelForm):
     comment = forms.CharField(
-        label='Комментарий администратора (обязательно)',
+        label='Комментарий',
         required=True,
-        widget=forms.Textarea(attrs={
-            'rows': 3,
-            'placeholder': 'Укажите комментарий к принятию заявки в работу...'
-        }),
-        error_messages={'required': 'Необходимо указать комментарий при переводе заявки в работу.'}
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
     )
 
     class Meta:
         model = DesignRequest
         fields = ['comment']
 
-    def clean_comment(self):
-        comment = self.cleaned_data.get('comment', '').strip()
-        if not comment:
-            raise ValidationError('Комментарий не может быть пустым.')
-        return comment
-
 
 class StatusCompletedForm(forms.ModelForm):
     design_image = forms.ImageField(
-        label='Изображение созданного дизайна (обязательно)',
+        label='Изображение дизайна',
         required=True,
-        error_messages={'required': 'Необходимо прикрепить изображение готового дизайна.'}
+        widget=forms.FileInput(attrs={'class': 'form-control'}),
     )
 
     class Meta:
         model = DesignRequest
         fields = ['design_image']
-
-    def clean_design_image(self):
-        image = self.cleaned_data.get('design_image')
-        if not image:
-            raise ValidationError('Необходимо прикрепить изображение готового дизайна.')
-
-        ext = os.path.splitext(image.name)[1].lower()
-        allowed_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
-        if ext not in allowed_extensions:
-            raise ValidationError('Недопустимый формат изображения. Разрешены: jpg, jpeg, png, bmp.')
-
-        return image
-
-
-class CategoryForm(forms.ModelForm):
-    name = forms.CharField(
-        label='Название новой категории',
-        widget=forms.TextInput(attrs={'placeholder': 'Например: Ландшафтный дизайн'})
-    )
-
-    class Meta:
-        model = Category
-        fields = ['name']
-
-    def clean_name(self):
-        name = self.cleaned_data.get('name', '').strip()
-        if not name:
-            raise ValidationError('Введите название категории.')
-        if Category.objects.filter(name__iexact=name).exists():
-            raise ValidationError('Категория с таким названием уже существует.')
-        return name

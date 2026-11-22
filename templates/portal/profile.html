@@ -1,84 +1,62 @@
-{% extends "base.html" %}
-
-{% block title %}Личный кабинет — Design.pro{% endblock %}
+{% extends 'base.html' %}
 
 {% block content %}
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <h2 class="card-title">Личный кабинет</h2>
-        <p class="mb-1"><strong>ФИО:</strong> {{ user.full_name|default:"Администратор" }}</p>
-        <p class="mb-1"><strong>Логин:</strong> {{ user.username }}</p>
-        <p class="mb-0"><strong>Email:</strong> {{ user.email }}</p>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Мои заявки</h2>
+    <a href="{% url 'request_create' %}" class="btn btn-primary">Новая заявка</a>
+</div>
+
+<form method="get" class="row g-2 align-items-center mb-3">
+    <div class="col-auto">
+        <label for="status" class="col-form-label">Фильтр по статусу:</label>
     </div>
-</div>
+    <div class="col-auto">
+        <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+            <option value="">Все</option>
+            {% for code, label in status_choices %}
+                <option value="{{ code }}" {% if current_status == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
 
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h4 class="mb-0">Мои заявки на дизайн интерьера</h4>
-    <a href="{% url 'request-create' %}" class="btn btn-primary">+ Создать заявку</a>
-</div>
-
-<div class="mb-3 d-flex flex-wrap align-items-center gap-2">
-    <span class="text-muted me-1">Фильтр по статусу:</span>
-    <a href="{% url 'profile' %}"
-       class="btn btn-sm {% if not current_status %}btn-dark{% else %}btn-outline-dark{% endif %}">
-        Все
-    </a>
-    <a href="?status=new"
-       class="btn btn-sm {% if current_status == 'new' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
-        Новая
-    </a>
-    <a href="?status=in_progress"
-       class="btn btn-sm {% if current_status == 'in_progress' %}btn-warning{% else %}btn-outline-warning text-dark{% endif %}">
-        Принято в работу
-    </a>
-    <a href="?status=completed"
-       class="btn btn-sm {% if current_status == 'completed' %}btn-success{% else %}btn-outline-success{% endif %}">
-        Выполнено
-    </a>
-</div>
-
-{% if user_requests %}
-    <div class="table-responsive">
-        <table class="table table-bordered bg-white align-middle">
-            <thead class="table-dark">
+{% if requests %}
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Дата добавления</th>
+                <th>Название</th>
+                <th>Описание</th>
+                <th>Категория</th>
+                <th>Статус</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in requests %}
                 <tr>
-                    <th>Дата и время</th>
-                    <th>Название</th>
-                    <th>Описание</th>
-                    <th>Категория</th>
-                    <th>Статус</th>
-                    <th>Действия</th>
+                    <td>{{ req.created_at|date:"d.m.Y H:i" }}</td>
+                    <td>{{ req.title }}</td>
+                    <td>{{ req.description }}</td>
+                    <td>{{ req.category.name }}</td>
+                    <td>
+                        {{ req.get_status_display }}
+                        {% if req.comment %}
+                            <div class="small text-muted">Комментарий: {{ req.comment }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if req.status == 'new' %}
+                            <a href="{% url 'request_delete' req.pk %}" class="btn btn-danger btn-sm">Удалить</a>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
-                {% for req in user_requests %}
-                    <tr>
-                        <td>{{ req.created_at|date:"d.m.Y H:i" }}</td>
-                        <td>{{ req.title }}</td>
-                        <td>{{ req.description }}</td>
-                        <td>{{ req.category.name }}</td>
-                        <td>
-                            <span class="badge {% if req.status == 'completed' %}bg-success{% elif req.status == 'in_progress' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
-                                {{ req.get_status_display }}
-                            </span>
-                        </td>
-                        <td>
-                            {% if req.status == 'new' %}
-                                <a href="{% url 'request-delete' req.pk %}" class="btn btn-outline-danger btn-sm">
-                                    Удалить
-                                </a>
-                            {% else %}
-                                <span class="text-muted small">Удаление недоступно</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+            {% endfor %}
+        </tbody>
+    </table>
 {% else %}
-    <div class="alert alert-info">
-        Заявок с выбранным статусом не найдено.
-    </div>
+    <p class="text-muted">Заявок нет.</p>
 {% endif %}
 {% endblock %}

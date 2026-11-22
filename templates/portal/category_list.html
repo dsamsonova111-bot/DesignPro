@@ -1,74 +1,40 @@
-{% extends "base.html" %}
-
-{% block title %}Управление категориями — Design.pro{% endblock %}
+{% extends 'base.html' %}
 
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-    <h2 class="mb-0">Управление категориями заявок</h2>
-    <a href="{% url 'admin-panel' %}" class="btn btn-outline-secondary">← Назад к заявкам</a>
-</div>
-
-<div class="row g-4">
-    <div class="col-md-5">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title mb-3">Добавить категорию</h5>
-                <form method="post" novalidate>
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
-                        <input type="text"
-                               name="{{ form.name.html_name }}"
-                               id="{{ form.name.id_for_label }}"
-                               value="{{ form.name.value|default_if_none:'' }}"
-                               placeholder="{{ form.name.field.widget.attrs.placeholder }}"
-                               class="form-control {% if form.name.errors %}is-invalid{% endif %}">
-                        {% for error in form.name.errors %}
-                            <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Добавить категорию</button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-7">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title mb-3">Существующие категории</h5>
-                {% if categories %}
-                    <div class="table-responsive">
-                        <table class="table table-bordered align-middle mb-0">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Название категории</th>
-                                    <th>Заявок в категории</th>
-                                    <th>Действия</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for cat in categories %}
-                                    <tr>
-                                        <td>{{ cat.id }}</td>
-                                        <td>{{ cat.name }}</td>
-                                        <td>{{ cat.requests.count }}</td>
-                                        <td>
-                                            <a href="{% url 'category-delete' cat.pk %}" class="btn btn-outline-danger btn-sm">
-                                                Удалить
-                                            </a>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="alert alert-info mb-0">Категорий пока нет.</div>
+<h2>Категории заявок</h2>
+<div class="row mt-3">
+    <div class="col-md-4 mb-3">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="{{ form.name.id_for_label }}" class="form-label">Новая категория</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <div class="text-danger small mt-1">{{ form.name.errors|join:", " }}</div>
                 {% endif %}
             </div>
-        </div>
+            <button type="submit" class="btn btn-primary">Добавить</button>
+        </form>
+    </div>
+    <div class="col-md-8">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th style="width: 120px;">Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in categories %}
+                    <tr>
+                        <td>{{ cat.name }}</td>
+                        <td><a href="{% url 'category_delete' cat.pk %}" class="btn btn-danger btn-sm">Удалить</a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="2" class="text-muted">Категорий нет</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}
