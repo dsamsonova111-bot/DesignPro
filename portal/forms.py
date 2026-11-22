@@ -25,6 +25,13 @@ class RegisterForm(UserCreationForm):
         required=True,
         widget=forms.EmailInput(attrs={'class': 'form-control'}),
     )
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email', '').strip()
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('Пользователь с таким email уже зарегистрирован.')
+        return email
+
     password1 = forms.CharField(
         label='Пароль',
         required=True,
