@@ -218,7 +218,7 @@ def category_delete(request, pk):
 
     if request.method == 'POST':
         category.delete()
-        messages.success(request, 'Категория и связанные с ней заявки удалены.')
+        messages.success(request, 'Категория удалена.')
         return redirect('category_list')
 
     return render(

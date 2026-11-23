@@ -120,7 +120,7 @@ class StatusCompletedForm(forms.ModelForm):
     design_image = forms.ImageField(
         label='Изображение дизайна',
         required=True,
-        widget=forms.FileInput(attrs={'class': 'form-control'}),
+            widget=forms.FileInput(attrs={'class': 'form-control'}),
     )
 
     class Meta:
