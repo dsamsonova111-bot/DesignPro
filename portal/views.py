@@ -152,9 +152,11 @@ def status_in_progress(request, pk):
     if request.method == 'POST':
         form = StatusInProgressForm(request.POST, instance=design_request)
         if form.is_valid():
-            updated = form.save(commit=False)
-            updated.status = DesignRequest.STATUS_IN_PROGRESS
-            updated.save()
+            design_request = form.save(commit=False)
+            design_request.user = request.user
+            design_request.status = DesignRequest.STATUS_NEW
+            design_request.comment = ''
+            design_request.save()
             messages.success(request, 'Статус изменен на «Принято в работу».')
             return redirect('admin_panel')
     else:
