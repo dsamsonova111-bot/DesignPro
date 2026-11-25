@@ -146,17 +146,15 @@ def status_in_progress(request, pk):
     design_request = get_object_or_404(DesignRequest, pk=pk)
 
     if design_request.status != DesignRequest.STATUS_NEW:
-        messages.error(request, 'Статус можно изменить только у заявки со статусом «Новая».')
+        messages.error(request, 'Взять в работу можно только заявку со статусом «Новая».')
         return redirect('admin_panel')
 
     if request.method == 'POST':
         form = StatusInProgressForm(request.POST, instance=design_request)
         if form.is_valid():
-            design_request = form.save(commit=False)
-            design_request.user = request.user
-            design_request.status = DesignRequest.STATUS_NEW
-            design_request.comment = ''
-            design_request.save()
+            updated = form.save(commit=False)
+            updated.status = DesignRequest.STATUS_IN_PROGRESS
+            updated.save()
             messages.success(request, 'Статус изменен на «Принято в работу».')
             return redirect('admin_panel')
     else:
@@ -173,8 +171,8 @@ def status_in_progress(request, pk):
 def status_completed(request, pk):
     design_request = get_object_or_404(DesignRequest, pk=pk)
 
-    if design_request.status != DesignRequest.STATUS_NEW:
-        messages.error(request, 'Статус можно изменить только у заявки со статусом «Новая».')
+    if design_request.status != DesignRequest.STATUS_IN_PROGRESS:
+        messages.error(request, 'Завершить можно только заявку со статусом «Принято в работу».')
         return redirect('admin_panel')
 
     if request.method == 'POST':
@@ -193,7 +191,6 @@ def status_completed(request, pk):
         'portal/status_completed.html',
         {'form': form, 'design_request': design_request},
     )
-
 
 @user_passes_test(is_admin, login_url='login')
 def category_list(request):
